@@ -1,0 +1,127 @@
+---
+  - include: iptables.yml
+
+  - name: install packages needed for openvpn
+    become: true
+    apt: pkg={{item}} state=installed
+    with_items:
+    - openvpn-auth-ldap
+    - zip
+
+  - name: enable ip forwarding
+    become: true
+    sysctl: name="net.ipv4.ip_forward" value=1 sysctl_set=yes
+
+  # setup openvpn
+  - name: install the openvpn server config
+    become: true
+    template: src=server.conf dest=/etc/openvpn/server.conf mode=0700 owner=root group=root
+    notify: restart openvpn
+  - name: install the openvpn ldap config
+    become: true
+    template: src=openvpn-ldap.conf dest=/etc/openvpn/openvpn-ldap.conf mode=0700 owner=root group=root
+    notify: restart openvpn
+
+  # setup easyrsa
+  - name: download easyrsa
+    become: true
+    get_url: url=https://github.com/OpenVPN/easy-rsa/releases/download/2.2.2/EasyRSA-2.2.2.tgz dest=/usr/local/src/EasyRSA-2.2.2.tgz
+      sha256sum=68da869085dde7c6a964e9c6104b86e4af91c4c592f8ec2a2f6cfc9d20808991
+  - name: unpack easyrsa
+    become: true
+    command: tar -zxf /usr/local/src/EasyRSA-2.2.2.tgz
+    args:
+      chdir: /usr/local
+      creates: /usr/local/EasyRSA-2.2.2
+  - name: fix easyrsa permissions
+    become: true
+    file: path=/usr/local/EasyRSA-2.2.2 state=directory recurse=yes owner={{ ansible_ssh_user }} group={{ ansible_ssh_user }} mode=0700
+  - file: path=/usr/local/EasyRSA-2.2.2/keys state=directory recurse=yes mode=0700
+  - name: setup easyrsa index.txt file
+    shell: touch keys/index.txt
+    args:
+      chdir: /usr/local/EasyRSA-2.2.2/
+      creates: /usr/local/EasyRSA-2.2.2/keys/index.txt
+  - name: setup easyrsa serial file
+    shell: echo 01 > keys/serial
+    args:
+      chdir: /usr/local/EasyRSA-2.2.2/
+      creates: /usr/local/EasyRSA-2.2.2/keys/serial
+
+  # build our CA and issue server key
+  - name: install easyrsa config
+    template: src=easy-rsa-vars dest=/usr/local/EasyRSA-2.2.2/vars
+  - name: install customized easyrsa build-ca
+    copy: src=build-ca dest=/usr/local/EasyRSA-2.2.2/build-ca mode=0700
+  - name: install customized easyrsa build-key-server
+    copy: src=build-key-server dest=/usr/local/EasyRSA-2.2.2/build-key-server mode=0700
+  - name: build our ca
+    shell: source ./vars; ./build-ca
+    args:
+      chdir: /usr/local/EasyRSA-2.2.2/
+      creates: /usr/local/EasyRSA-2.2.2/keys/ca.crt
+      executable: /bin/bash
+  - name: build our server key
+    shell: source ./vars; ./build-key-server server
+    args:
+      chdir: /usr/local/EasyRSA-2.2.2/
+      creates: /usr/local/EasyRSA-2.2.2/keys/server.key
+      executable: /bin/bash
+  - name: build the diffie-hellman params
+    shell: source ./vars; ./build-dh
+    args:
+      chdir: /usr/local/EasyRSA-2.2.2/
+      creates: /usr/local/EasyRSA-2.2.2/keys/dh2048.pem
+      executable: /bin/bash
+
+  # install our CA cert and issue server key
+  - name: create openvpn keys directory and move keys in place
+    become: true
+    file: path=/etc/openvpn/keys state=directory mode=0700 owner=root group=root
+  - name: install openvpn ca.crt
+    become: true
+    command: cp /usr/local/EasyRSA-2.2.2/keys/ca.crt /etc/openvpn/keys/ca.crt creates=/etc/openvpn/keys/ca.crt
+  - name: install openvpn server.crt
+    become: true
+    command: cp /usr/local/EasyRSA-2.2.2/keys/server.crt /etc/openvpn/keys/server.crt creates=/etc/openvpn/keys/server.crt
+  - name: install openvpn server.key
+    become: true
+    command: cp /usr/local/EasyRSA-2.2.2/keys/server.key /etc/openvpn/keys/server.key creates=/etc/openvpn/keys/server.key
+  - name: install openvpn dh2048.pem
+    become: true
+    command: cp /usr/local/EasyRSA-2.2.2/keys/dh2048.pem /etc/openvpn/keys/dh2048.pem creates=/etc/openvpn/keys/dh2048.pem
+
+  # start openvpn
+  - name: check if openvpn is running   # necessary since "service start openvpn" is not idempotent
+    shell: netstat -an | egrep "^udp\s+.*\s+0.0.0.0:1194\s+"
+    register: openvpn_running
+    ignore_errors: yes
+    changed_when: False
+  - name: start openvpn service
+    become: true
+    service: name=openvpn state=started
+    when: openvpn_running|failed
+
+  # package up openvpn files for users
+  - name: package up openvpn files for users
+    become: true
+    file: path=/usr/local/etc/{{sealauth_bind_org}}.tblk state=directory owner={{ ansible_ssh_user }} group={{ ansible_ssh_user }} mode=0755
+    register: new_openvpn_client
+  - name: package up openvpn ca.crt
+    become: true
+    shell: cp /usr/local/EasyRSA-2.2.2/keys/ca.crt /usr/local/etc/{{sealauth_bind_org}}.tblk/ ; chmod 644 /usr/local/etc/{{sealauth_bind_org}}.tblk/ca.crt
+      creates=/usr/local/etc/{{sealauth_bind_org}}.tblk/ca.crt
+    register: new_openvpn_client
+  - name: prep openvpn client.ovpn
+    become: true
+    template: src=client.ovpn dest=/usr/local/etc/{{sealauth_bind_org}}.tblk/client.ovpn
+    when: new_openvpn_client|changed
+    register: new_openvpn_client
+  - name: zip openvpn client tblk config directory
+    become: true
+    shell: cd /usr/local/etc ; zip -r {{sealauth_bind_org}}.tblk.zip {{sealauth_bind_org}}.tblk
+      creates=/usr/local/etc/{{sealauth_bind_org}}.tblk.zip
+    when: new_openvpn_client|changed
+    register: new_openvpn_client_zip
+  - name: fetch client config archive (assumes this is run from jenkins)
+    fetch: src=/usr/local/etc/{{sealauth_bind_org}}.tblk.zip dest=openvpn.tblk.zip fail_on_missing=yes flat=yes

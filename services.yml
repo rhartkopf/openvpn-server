@@ -1,0 +1,15 @@
+---
+# For more info in Playbook Roles and Include Statements:
+# http://docs.ansible.com/playbooks_roles.html
+
+# The ansible user has a uniquely generated SSH keypair for each host, let's use that unique key
+- name: use host-specific ansible ssh key
+  gather_facts: false
+  hosts: web
+  tasks:
+    - set_fact: ansible_ssh_private_key_file=~/.ssh/ansible/id_dsa_{{ inventory_hostname }}
+
+- name: setup vpn host
+  hosts: vpn
+  roles:
+    - openvpn

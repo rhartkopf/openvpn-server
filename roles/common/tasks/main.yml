@@ -1,0 +1,27 @@
+---
+
+  - name: install packages needed on all hosts for deb
+    become: true
+    apt: pkg={{item}} state=installed update_cache=yes
+    with_items: common_deb_packages
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: install packages needed on all hosts for rhel
+    become: true
+    yum: name={{item}} state=installed
+    with_items: common_rhel_packages
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux' or ansible_distribution == 'Amazon'
+
+  - name: configure swappiness
+    become: true
+    lineinfile: dest=/etc/sysctl.conf state=present regexp="^vm.swappiness=" line="vm.swappiness=10"
+    register: swappiness
+
+  - name: set real-time swappiness
+    become: true
+    command: sysctl vm.swappiness=10
+    when: swappiness | changed
+
+  - name: set timezone data
+    become: true
+    file: path=/etc/localtime state=link src=/usr/share/zoneinfo/America/Denver force=yes

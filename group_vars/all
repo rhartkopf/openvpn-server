@@ -1,0 +1,45 @@
+# sealauth config for this client
+sealauth_bind_org: ate
+sealauth_bind_user: chco_svc_web
+sealauth_bind_pw: HRCMPmQegjEHctYDg1TX
+
+# generic sealauth config
+sealauth_ldap_servers:
+  - auth1.atrust.com
+  - auth2.atrust.com
+sealauth_ldap_port: 636
+sealauth_ldap_uri: ldaps://auth1.atrust.com:636,ldaps://auth2.atrust.com:636
+
+# route53 - this account can be the at-prod account (infra.atrust.com.) or
+# the client account if their DNS is managed by Route53
+route53_zone: infra.atrust.com.
+route53_aws_access_key: AKIAITBOJKVCGMVVGFAA
+route53_aws_secret_key: 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
+
+# at and client management space
+at_trusted_range: 204.115.117.0/24
+trusted_range: 10.0.0.0/16
+
+# ops_server and ops_server_cidr must be set, just leave the dummy value if there's no ops server
+ops_server: 10.0.0.10
+ops_server_cidr: 10.0.0.10/32
+#graphite_server: "{{ ops_server }}"
+
+# custom graylog2 server - leave blank to send to AT graylog2 server
+graylog2_server: logseal.atrust.com
+
+# openvpn_client_subnet - VPC subnet reserved for VPN clients
+# Add routes to all subnets that should be accessible from VPN
+#openvpn_client_subnet: 10.0.10.0 255.255.255.0
+#openvpn_client_subnet_cidr: 10.0.10.0/24
+#openvpn_routes:
+#  - 10.0.0.0 255.255.255.0
+#  - 10.0.1.0 255.255.255.0
+
+# custom iptables rules applied to all hosts
+custom_iptables_rules: []
+#  - -A INPUT -p tcp -m tcp -s {{ trusted_range }} --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+#  - -A OUTPUT -p tcp -m tcp -d {{ trusted_range }} --sport 22 -m state --state ESTABLISHED -j ACCEPT
+
+# mysql credentials
+mysql_root_password:

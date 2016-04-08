@@ -1,0 +1,6 @@
+---
+# For more info in Playbook Roles and Include Statements:
+# http://docs.ansible.com/playbooks_roles.html
+
+  - include: baseconfig.yml
+  - include: services.yml

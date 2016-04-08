@@ -1,0 +1,6 @@
+---
+common_deb_packages:
+  - ntp
+
+common_rhel_packages:
+  - ntp

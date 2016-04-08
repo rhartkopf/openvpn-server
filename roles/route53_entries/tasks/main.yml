@@ -1,0 +1,25 @@
+---
+
+- name: setup route53 A record for this host
+  connection: local
+  route53: >
+      command=create
+      zone={{ route53_zone }}
+      record={{ inventory_hostname }}
+      type=A
+      ttl=60
+      overwrite=yes
+      value={{ ip_address }}
+      retry_interval=5
+      aws_access_key={{ route53_aws_access_key }}
+      aws_secret_key={{ route53_aws_secret_key }}
+
+- name: wait for route53 to return answer for this host
+  connection: local
+  command: dig +short {{ inventory_hostname }}
+  register: route53_result
+  until: '"{{ ip_address }}" in route53_result.stdout'
+  changed_when: False
+  retries: 20
+  delay: 6
+

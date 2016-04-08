@@ -1,0 +1,25 @@
+# Environments
+[tag_Environment_dev]
+
+[dev:children]
+tag_Environment_dev
+
+# Operating Systems
+[ami_08111162]
+[ami_3d787d57]
+
+[linux:children]
+ami_08111162
+
+[windows:children]
+ami_3d787d57
+
+# Roles
+[tag_Role_solr]
+[tag_Role_web]
+
+[solr:children]
+tag_Role_solr
+
+[web:children]
+tag_Role_web

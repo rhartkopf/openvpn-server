@@ -1,0 +1,7 @@
+---
+- name: restart iptables
+  become: true
+  command: /etc/init.d/iptables-persistent reload
+- name: restart openvpn
+  become: true
+  command: service openvpn restart

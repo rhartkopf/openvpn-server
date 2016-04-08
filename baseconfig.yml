@@ -1,0 +1,30 @@
+---
+
+# Use the insecure deploy key to connect for now, then delete it
+- name: use host-specific ansible ssh key
+  gather_facts: false
+  hosts: linux
+  tasks:
+    - set_fact: ansible_ssh_private_key_file=~/.ssh/ansible/chco-episerver-deploy
+    - set_fact: my_remote_user=ec2-user
+
+- name: deploy ansible user to hosts
+  gather_facts: false
+  remote_user: "{{ my_remote_user }}"
+  hosts: linux
+  roles:
+    - ansible_user
+
+
+# The ansible user has a uniquely generated SSH keypair for each host, let's use that unique key
+- name: use host-specific ansible ssh key
+  gather_facts: false
+  hosts: linux
+  tasks:
+    - set_fact: ansible_ssh_private_key_file=~/.ssh/ansible/id_dsa_{{ inventory_hostname }}
+    - set_fact: my_remote_user=ansible
+
+- name: basic config on all hosts
+  hosts: linux
+  roles:
+    - common

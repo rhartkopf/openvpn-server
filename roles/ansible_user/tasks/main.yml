@@ -1,0 +1,45 @@
+---
+
+- name: test connection using deploy key before running these tasks
+  local_action: shell ssh -i {{ ansible_ssh_private_key_file }} {{ my_remote_user }}@{{ ansible_ssh_host}} whoami
+  ignore_errors: true
+  register: deploy_key_test
+  changed_when: False
+  retries: 5
+  delay: 5
+
+- name: create a local ansible user ssh keypair for this host
+  local_action: shell ssh-keygen -b 1024 -N '' -f ~/.ssh/ansible/id_dsa_{{ inventory_hostname }} -t dsa -q
+  args:
+    creates: ~/.ssh/ansible/id_dsa_{{ inventory_hostname }}
+  when: "'Permission denied' not in deploy_key_test.stderr"
+
+- name: create the ansible user
+  user: name=ansible shell=/bin/bash
+  become: true
+  when: "'Permission denied' not in deploy_key_test.stderr"
+
+- name: setup the ansible user ssh dir
+  become: true
+  file: path=/home/ansible/.ssh state=directory owner=ansible group=ansible mode=0700
+  when: "'Permission denied' not in deploy_key_test.stderr"
+
+- name: copy over the ansible user ssh auth key
+  become: true
+  copy: src=~/.ssh/ansible/id_dsa_{{ inventory_hostname }}.pub
+    dest=/home/ansible/.ssh/authorized_keys owner=ansible group=ansible mode=0600
+  when: "'Permission denied' not in deploy_key_test.stderr"
+
+- name: add the ansible user to sudoers
+  become: true
+  copy: content="ansible ALL=(ALL:ALL) NOPASSWD:ALL"
+    dest=/etc/sudoers.d/ansible owner=root group=root mode=0440
+  when: "'Permission denied' not in deploy_key_test.stderr"
+
+- name: delete authorized_keys for root user
+  become: true
+  file: path=/home/ec2-user/.ssh/authorized_keys state=absent
+  when: "'Permission denied' not in deploy_key_test.stderr"
+
+- name: use host-specific ansible ssh key
+  set_fact: ansible_ssh_private_key_file=~/.ssh/ansible/id_dsa_{{ inventory_hostname }}

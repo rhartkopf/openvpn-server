@@ -1,0 +1,5 @@
+windows_users:
+  - name: rhartkopf
+    groups: ["Administrators"]
+
+windows_temp_pass: Change,me!plz
