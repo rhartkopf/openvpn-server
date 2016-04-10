@@ -1,5 +1,4 @@
----
-iptables_rules:
+group_custom_iptables_rules:
   - -A INPUT -p udp -m udp --dport 1194 -m state --state NEW,ESTABLISHED -j ACCEPT 
   - -A OUTPUT -p udp -m udp --sport 1194 -m state --state ESTABLISHED -j ACCEPT 
   - -A FORWARD -i eth0 -o tun0 -m state --state RELATED,ESTABLISHED -j ACCEPT

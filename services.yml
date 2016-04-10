@@ -5,7 +5,7 @@
 # The ansible user has a uniquely generated SSH keypair for each host, let's use that unique key
 - name: use host-specific ansible ssh key
   gather_facts: false
-  hosts: web
+  hosts: all
   tasks:
     - set_fact: ansible_ssh_private_key_file=~/.ssh/ansible/id_dsa_{{ inventory_hostname }}
 

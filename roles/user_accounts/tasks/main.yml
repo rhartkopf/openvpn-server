@@ -1,0 +1,9 @@
+---
+
+- name: add rhartkopf user
+  user: name=rhartkopf groups=sudo
+
+- name: add authorized key for rhartkopf
+  authorized_key:
+    name: rhartkopf
+    key: "{{ lookup('file', '/Users/rhartkopf/.ssh/ryanhartkopf.pub') }}"

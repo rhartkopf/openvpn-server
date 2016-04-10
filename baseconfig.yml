@@ -5,7 +5,7 @@
   gather_facts: false
   hosts: linux
   tasks:
-    - set_fact: ansible_ssh_private_key_file=~/.ssh/ansible/chco-episerver-deploy
+    - set_fact: ansible_ssh_private_key_file=/Users/rhartkopf/repos/rhartkopf/openvpn-server/terraform/ssh/insecure-deployer
     - set_fact: my_remote_user=ec2-user
 
 - name: deploy ansible user to hosts
@@ -28,3 +28,4 @@
   hosts: linux
   roles:
     - common
+    - user_accounts

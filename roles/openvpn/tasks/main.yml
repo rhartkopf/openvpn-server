@@ -1,6 +1,4 @@
 ---
-  - include: iptables.yml
-
   - name: install packages needed for openvpn
     become: true
     apt: pkg={{item}} state=installed
@@ -16,10 +14,6 @@
   - name: install the openvpn server config
     become: true
     template: src=server.conf dest=/etc/openvpn/server.conf mode=0700 owner=root group=root
-    notify: restart openvpn
-  - name: install the openvpn ldap config
-    become: true
-    template: src=openvpn-ldap.conf dest=/etc/openvpn/openvpn-ldap.conf mode=0700 owner=root group=root
     notify: restart openvpn
 
   # setup easyrsa
